@@ -1,23 +1,59 @@
 import Head from "next/head";
 import Image from "next/image";
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
 import styles from "../styles/Home.module.css";
 
 type Talk = {
   title: string;
   abstract: string;
 };
-
+type Status = "Idle" | "Submitted" | "Complete"; // Union Type vs Enum
+type Errors = {
+  title: string,
+  abstract: string
+}
 const newTalk: Talk = {
   title: "",
   abstract: "",
 };
 
 export default function Home() {
+  const [status, setStatus] = useState<Status>("Idle"); //uses Generics
   const [talk, setTalk] = useState(newTalk);
-
-  function onChange(event: ChangeEvent<HTMLInputElement>) {
+  const [talks, setTalks] = useState<Talk[]>([]);
+  const errors = validate();
+  function onChange(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     setTalk({ ...talk, [event.target.id]: event.target.value });
+  }
+
+  function handleSubmit(event:FormEvent<HTMLFormElement>) {
+    const isValid = Object.values(errors).filter(err => err).length == 0;
+    event.preventDefault();
+    if(!isValid) return;
+    setStatus("Submitted");
+
+    console.log('isValid', isValid);
+    if(isValid) {
+      setStatus("Complete")
+      setTalk(newTalk);
+    }
+    console.log('..in handleSubmit', event.target);
+    setTalks([...talks, talk]);
+  }
+
+  function validate() {
+    const errors: Errors = {
+      title: null,
+      abstract: null
+    };
+    if (!talk.title) {
+      errors.title = "Title is Required."
+    }
+    if (!talk.abstract) {
+      errors.abstract = "Abstract is Required."
+    }
+    console.log('errors', errors);
+    return errors;
   }
 
   return (
@@ -30,8 +66,16 @@ export default function Home() {
 
       <main className={styles.main}>
         <h1 className={styles.title}>Speak at ConnectTech!</h1>
+        <section>
+          <h2>Submitted Talks </h2>
+          <ul>
+        {talks.map(talk => {
+          <li>{talk.title}</li>
+        })}
+        </ul>
+        </section>
 
-        <form>
+        <form onSubmit={handleSubmit}>
           <h2>Submit a talk</h2>
           <div>
             <label htmlFor="title">Title</label>
@@ -42,11 +86,13 @@ export default function Home() {
               value={talk.title}
               onChange={onChange}
             />
+            {errors.title && status === "Submitted" && <p> {errors.title} </p>}
           </div>
           <div>
             <label htmlFor="abstract">Abstract</label>
             <br />
             <textarea id="abstract" value={talk.abstract} onChange={onChange} />
+            {errors.abstract && status === "Submitted" && <p> {errors.abstract} </p>}
           </div>
           <input type="submit" value="Submit talk" />
         </form>
